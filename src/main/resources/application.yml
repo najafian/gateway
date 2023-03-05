@@ -1,0 +1,92 @@
+server:
+  port: ${GATEWAY_DOCKER_PORT:8080}
+#  forward-headers-strategy: framework
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URL:http://admin:admin@172.17.0.1:8761/eureka/}
+
+spring:
+  application:
+    name: gateway-service
+  config:
+    import: "optional:configserver:http://admin:admin@172.17.0.1:8761"
+  main:
+    allow-bean-definition-overriding: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          public-key-location: classpath:key/public_key.pem
+      client:
+        provider:
+          demo:
+            issuer-uri: ${ISSUER_URI:http://172.17.0.1:9999/oauth/token}
+            userNameAttribute: email
+        registration:
+          demo:
+            clientName: helia-gateway
+            scope:
+              - openid
+              - any
+            client-secret: HeliaUserSecret
+            client-id: HeliaUserClient
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: workflow-service
+          uri: lb://workflow-service
+          predicates:
+            - Path=/workflow/**
+          filters:
+            - TokenRelay=
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/workflow/(?<path>.*), /$\{path}
+        - id: calendar-service
+          uri: lb://calendar-service
+          predicates:
+            - Path=/calendar/**
+          filters:
+            - TokenRelay=
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/calendar/(?<path>.*), /$\{path}
+        - id: vitamin-service
+          uri: lb://vitamin-service
+          predicates:
+            - Path=/vitamin/**
+          filters:
+            - TokenRelay=
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/vitamin/(?<path>.*), /$\{path}
+        - id: moover-service
+          uri: lb://moover-service
+          predicates:
+            - Path=/moover/**
+          filters:
+            - TokenRelay=
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/moover/(?<path>.*), /$\{path}
+
+        - id: openapi
+          uri: http://localhost:${server.port}
+          predicates:
+            - Path=/v3/api-docs/**
+          filters:
+            - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: workflow
+        url: /v3/api-docs/workflow
+      - name: calendar
+        url: /v3/api-docs/calendar
+      - name: vitaminlounge
+        url: /v3/api-docs/vitamin
+      - name: moover
+        url: /v3/api-docs/moover

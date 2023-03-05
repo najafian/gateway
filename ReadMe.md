@@ -1,0 +1,1 @@
+/webjars/swagger-ui/index.html
